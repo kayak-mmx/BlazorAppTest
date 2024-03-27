@@ -1,0 +1,80 @@
+﻿@page "/loadcsv"
+@using System.Text.RegularExpressions;
+@using BlazorAppTest.Shared;
+
+<PageTitle>Load CSV template</PageTitle>
+
+<h1>Load template</h1>
+
+<InputFile OnChange="@OnInputFileChange" class="btn btn-primary" />
+
+<p><h3>Load Csv</h3></p>
+@if (!string.IsNullOrEmpty(message))
+{
+    <p>@message</p>
+}
+else
+{
+    @foreach (var predio in csv)
+    {
+        <ul>
+            <li>@predio.ToString()</li>
+        </ul>
+    }
+}
+
+@code {
+    List<Catastral> csv = new List<Catastral>();
+    string message = string.Empty;
+
+    public async Task OnInputFileChange(InputFileChangeEventArgs e)
+    {
+        //SpinnerModal.ShowSpinner();
+        message = string.Empty;
+        var singleFile = e.File;
+
+        Regex regex = new Regex(".+\\.csv", RegexOptions.Compiled);
+        if (!regex.IsMatch(singleFile.Name))
+        {
+            //show error invalidad format file
+            message = "This file doesn't have an csv extension. ";
+        }
+        else
+        {
+            var stream = singleFile.OpenReadStream();
+
+            MemoryStream ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            stream.Close();
+            var outputFileString = System.Text.Encoding.UTF8.GetString(ms.ToArray());
+
+            foreach (var item in outputFileString.Split(Environment.NewLine))
+            {
+                var predio = SplitCSV(item.ToString());
+                if (predio != null)
+                {
+                    csv.Add(predio);
+                }
+            }
+        }
+    }
+
+    private Catastral SplitCSV(string input)
+    {
+        var data = input.Split(';');
+        if (data.Length == 6)
+        {
+            return new Catastral
+            {
+                Sector = data[0],
+                Manzana = data[1],
+                Predio = data[2],
+                Division = data[3],
+                PVertical = data[4],
+                PHorizontal = data[5]
+            };
+        }
+
+        return null; 
+    }
+}
